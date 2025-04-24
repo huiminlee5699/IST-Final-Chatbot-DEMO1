@@ -8,7 +8,7 @@ st.set_page_config(
     page_title="💬 CHATBOT AI",
 )
 
-# Initialize streamlit analytics tracking with bare minimum
+# Initialize streamlit analytics tracking
 with streamlit_analytics.track():
     # Original styling - unchanged
     st.markdown("""
@@ -44,32 +44,35 @@ with streamlit_analytics.track():
         "Feel free to ask me anything!"
     )
 
-    # Use the API key from Streamlit secrets
-    openai_api_key = st.secrets["openai_api_key"]
-
-    # Create an OpenAI client.
-    client = OpenAI(api_key=openai_api_key)
-
-    # Create session state variables for tracking
+    # Initialize session state variables for tracking
     if "messages" not in st.session_state:
         st.session_state.messages = []
     
     if "link_shown_count" not in st.session_state:
         st.session_state.link_shown_count = 0
         
-    # Display the existing chat messages via `st.chat_message`.
+    if "link_click_count" not in st.session_state:
+        st.session_state.link_click_count = 0
+    
+    # Use the API key from Streamlit secrets
+    openai_api_key = st.secrets["openai_api_key"]
+
+    # Create an OpenAI client.
+    client = OpenAI(api_key=openai_api_key)
+            
+    # Display the existing chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"], unsafe_allow_html=True)
             
-    # Create a chat input field to allow the user to enter a message. 
+    # Create a chat input field
     if prompt := st.chat_input("What would you like to know today?"):
-        # Store and display the current prompt.
+        # Store and display the current prompt
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
             
-        # Generate a response using the OpenAI API.
+        # Generate a response using the OpenAI API
         stream = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -81,9 +84,9 @@ with streamlit_analytics.track():
         
         time.sleep(1)
         
-        # Stream the assistant response while building it up
+        # Stream the assistant response
         with st.chat_message("assistant"):
-            response_container = st.empty()  # placeholder for streaming text
+            response_container = st.empty()
             full_response = ""
             
             # Count previous assistant messages
@@ -91,36 +94,43 @@ with streamlit_analytics.track():
                 msg for msg in st.session_state.messages if msg["role"] == "assistant"
             ]
             
-            # If this is after the second assistant message (2nd, 4th, etc.), prepend the message
-            prepend_message = ""
-            if len(assistant_messages) == 1:  # Changed condition to display after 2nd response
-                # Track that system card link was shown
+            # Check if this is the second response
+            if len(assistant_messages) == 1:
+                # Track that the system card prompt is shown
                 st.session_state.link_shown_count += 1
                 
-                # Use HTML for tracking clicks with a special class
+                # Instead of HTML link, we'll add text and then a button
+                prepend_message = "💡🧠🤓 **Want to learn how I come up with responses?**\n\n"
+                full_response += prepend_message
+                response_container.markdown(full_response)
+                
+                # Add a button that links to the system card
                 system_card_url = "https://www.figma.com/proto/haXTVr4wZaeSC344BqDBpR/Text-Transparency-Card?page-id=0%3A1&node-id=1-33&p=f&viewport=144%2C207%2C0.47&t=Hp8ZCw5Fg7ahsiq1-8&scaling=min-zoom&content-scaling=fixed&hide-ui=1"
                 
-                prepend_message = (
-                    "💡🧠🤓 <strong>Want to learn how I come up with responses?</strong>\n"
-                    f"<a href=\"{system_card_url}\" target=\"_blank\" style=\"color: #007BFF; text-decoration: none;\" "
-                    f"class=\"system-card-link\">"
-                    "Read more here →\n"
-                    "</a>\n\n ---------------- \n"
-                )
-                  
-                full_response += prepend_message
-                response_container.markdown(full_response, unsafe_allow_html=True)
+                # Create columns for text and button
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.markdown("Read more here →")
+                with col2:
+                    # Using a button that opens URL when clicked
+                    if st.button("→", key="system_card_button"):
+                        st.session_state.link_click_count += 1
+                        st.markdown(f'<script>window.open("{system_card_url}", "_blank");</script>', unsafe_allow_html=True)
+                
+                # Add separator line
+                full_response += "\n\n---------------- \n\n"
+                response_container.markdown(full_response)
             
             # Continue streaming the assistant's response
             for chunk in stream:
                 if chunk.choices[0].delta.content:
                     full_response += chunk.choices[0].delta.content
-                    response_container.markdown(full_response, unsafe_allow_html=True)
+                    response_container.markdown(full_response)
         
             # Store the final response in session state
             st.session_state.messages.append({"role": "assistant", "content": full_response})
-
-    # Simple admin section in sidebar without analyze
+    
+    # Admin section in sidebar
     with st.sidebar:
         st.title("Admin Panel")
         password = st.text_input("Enter password to view analytics", type="password")
@@ -130,10 +140,17 @@ with streamlit_analytics.track():
             
             # Display custom tracking metrics
             st.metric("System Card Links Shown", st.session_state.link_shown_count)
+            st.metric("System Card Links Clicked", st.session_state.link_click_count)
             
-            # Provide information about analytics
+            # Calculate and display click-through rate
+            if st.session_state.link_shown_count > 0:
+                ctr = (st.session_state.link_click_count / st.session_state.link_shown_count) * 100
+                st.metric("Click-Through Rate", f"{ctr:.1f}%")
+            
+            # Info about analytics
             st.info("""
-            Analytics are being collected in the background. 
+            Analytics are being collected in the background.
             
-            For more detailed analytics, consider updating streamlit-analytics to the latest version.
+            Basic metrics are shown above. The click count represents the number of times 
+            users have clicked the system card button.
             """)
