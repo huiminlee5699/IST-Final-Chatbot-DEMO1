@@ -8,7 +8,7 @@ st.set_page_config(
     page_title="💬 CHATBOT AI",
 )
 
-# Initialize streamlit analytics tracking
+# Initialize streamlit analytics tracking with bare minimum
 with streamlit_analytics.track():
     # Original styling - unchanged
     st.markdown("""
@@ -120,7 +120,7 @@ with streamlit_analytics.track():
             # Store the final response in session state
             st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-    # Admin section in sidebar
+    # Simple admin section in sidebar without analyze
     with st.sidebar:
         st.title("Admin Panel")
         password = st.text_input("Enter password to view analytics", type="password")
@@ -131,10 +131,9 @@ with streamlit_analytics.track():
             # Display custom tracking metrics
             st.metric("System Card Links Shown", st.session_state.link_shown_count)
             
-            # Show Streamlit Analytics dashboard with options from the documentation
-            if st.button("View Full Analytics"):
-                streamlit_analytics.analyze(
-                    min_occurences=1,           # Only show events that occurred at least once
-                    hide_index=True,            # Hide the index column
-                    events_by_time_granularity="day"  # Group events by day
-                )
+            # Provide information about analytics
+            st.info("""
+            Analytics are being collected in the background. 
+            
+            For more detailed analytics, consider updating streamlit-analytics to the latest version.
+            """)
