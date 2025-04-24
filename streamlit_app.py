@@ -131,12 +131,10 @@ with streamlit_analytics.track():
             # Display custom tracking metrics
             st.metric("System Card Links Shown", st.session_state.link_shown_count)
             
-            # Show Streamlit Analytics dashboard
+            # Show Streamlit Analytics dashboard with options from the documentation
             if st.button("View Full Analytics"):
-                # This is the key change - use a separate container for the analytics
-                analytics_container = st.container()
-                with analytics_container:
-                    streamlit_analytics.analyze(
-                        hide_index=True,
-                        events_by_time_granularity="day"
-                    )
+                streamlit_analytics.analyze(
+                    min_occurences=1,           # Only show events that occurred at least once
+                    hide_index=True,            # Hide the index column
+                    events_by_time_granularity="day"  # Group events by day
+                )
