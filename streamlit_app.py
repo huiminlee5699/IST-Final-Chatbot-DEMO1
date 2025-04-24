@@ -96,26 +96,31 @@ with streamlit_analytics.track():
             
             # Check if this is the second response
             if len(assistant_messages) == 1:
-                # Track that the system card prompt is shown
+                # Track that system card link was shown
                 st.session_state.link_shown_count += 1
                 
-                # Instead of HTML link, we'll add text and then a button
+                # Create a unique message ID for this response
+                message_id = f"msg_{len(st.session_state.messages)}"
+                
+                # Main text for the response
                 prepend_message = "💡🧠🤓 **Want to learn how I come up with responses?**\n\n"
                 full_response += prepend_message
                 response_container.markdown(full_response)
                 
-                # Add a button that links to the system card
+                # System card URL
                 system_card_url = "https://www.figma.com/proto/haXTVr4wZaeSC344BqDBpR/Text-Transparency-Card?page-id=0%3A1&node-id=1-33&p=f&viewport=144%2C207%2C0.47&t=Hp8ZCw5Fg7ahsiq1-8&scaling=min-zoom&content-scaling=fixed&hide-ui=1"
                 
-                # Create columns for text and button
-                col1, col2 = st.columns([3, 1])
+                # Create columns for link and tracking button
+                col1, col2 = st.columns([4, 1])
+                
                 with col1:
-                    st.markdown("Read more here →")
+                    st.markdown(f"[Read more here →]({system_card_url})")
+                
                 with col2:
-                    # Using a button that opens URL when clicked
-                    if st.button("→", key="system_card_button"):
+                    # Add a separate "I visited" button to track
+                    if st.button("✓ Visited", key=f"visited_{message_id}"):
                         st.session_state.link_click_count += 1
-                        st.markdown(f'<script>window.open("{system_card_url}", "_blank");</script>', unsafe_allow_html=True)
+                        st.success("Thanks for visiting!")
                 
                 # Add separator line
                 full_response += "\n\n---------------- \n\n"
@@ -152,5 +157,6 @@ with streamlit_analytics.track():
             Analytics are being collected in the background.
             
             Basic metrics are shown above. The click count represents the number of times 
-            users have clicked the system card button.
+            users have clicked the "Visited" button after viewing the system card.
             """)
+            
