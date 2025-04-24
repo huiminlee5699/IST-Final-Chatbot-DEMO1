@@ -9,11 +9,8 @@ st.set_page_config(
     page_title="💬 CHATBOT AI",
 )
 
-# Initialize streamlit analytics tracking
-with streamlit_analytics.track(
-    save_to_file=True,
-    save_to_file_path="./analytics_data.json",
-):
+# Initialize analytics tracking without file saving
+with streamlit_analytics.track():
     # Original styling - unchanged
     st.markdown("""
     <style>
@@ -59,6 +56,10 @@ with streamlit_analytics.track(
     if "messages" not in st.session_state:
         st.session_state.messages = []
         
+    # Initialize click tracking in session state
+    if "system_card_clicks" not in st.session_state:
+        st.session_state.system_card_clicks = 0
+        
     # Display the existing chat messages via `st.chat_message`.
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -67,7 +68,7 @@ with streamlit_analytics.track(
     # Create a chat input field to allow the user to enter a message. 
     if prompt := st.chat_input("What would you like to know today?"):
         # Log the user prompt in analytics
-        streamlit_analytics.log_event("user_prompt", {"prompt": prompt})
+        streamlit_analytics.log_event("user_prompt")
         
         # Store and display the current prompt.
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -102,12 +103,13 @@ with streamlit_analytics.track(
                 # Log that the system card link was shown to the user
                 streamlit_analytics.log_event("system_card_link_shown")
                 
-                # Create a unique ID for the link to track clicks
-                link_id = "system_card_link"
+                # Custom HTML with click tracking using JavaScript
+                system_card_url = "https://www.figma.com/proto/haXTVr4wZaeSC344BqDBpR/Text-Transparency-Card?page-id=0%3A1&node-id=1-33&p=f&viewport=144%2C207%2C0.47&t=Hp8ZCw5Fg7ahsiq1-8&scaling=min-zoom&content-scaling=fixed&hide-ui=1"
                 
                 prepend_message = (
                     "💡🧠🤓 <strong>Want to learn how I come up with responses?</strong>\n"
-                    f"<a href=\"https://www.figma.com/proto/haXTVr4wZaeSC344BqDBpR/Text-Transparency-Card?page-id=0%3A1&node-id=1-33&p=f&viewport=144%2C207%2C0.47&t=Hp8ZCw5Fg7ahsiq1-8&scaling=min-zoom&content-scaling=fixed&hide-ui=1\" id=\"{link_id}\" target=\"_blank\" style=\"color: #007BFF; text-decoration: none;\" onclick=\"fetch('https://'+window.location.host+'/\_stcore/forward-event', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({type: 'streamlit:user_event', payload: {event: 'system_card_link_clicked'}})}).then(console.log).catch(console.error); return true;\">\n"
+                    f"<a href=\"{system_card_url}\" target=\"_blank\" style=\"color: #007BFF; text-decoration: none;\" "
+                    f"onclick=\"parent.postMessage({{type: 'streamlit:user_event', payload: {{event: 'system_card_clicked'}} }}, '*'); return true;\">"
                     "Read more here →\n"
                     "</a>\n\n ---------------- \n"
                 )
@@ -125,9 +127,37 @@ with streamlit_analytics.track(
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
             # Log the assistant response
-            streamlit_analytics.log_event("assistant_response", {"message_count": len(assistant_messages) + 1})
+            streamlit_analytics.log_event("assistant_response")
 
-    # Add an admin section with a password to view analytics
+    # Custom component to listen for the system card click event
+    components.html(
+        """
+        <script>
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'streamlit:user_event' && event.data.payload.event === 'system_card_clicked') {
+                // Send this event to Streamlit
+                window.parent.postMessage({
+                    type: 'streamlit:setComponentValue',
+                    value: true
+                }, '*');
+            }
+        });
+        </script>
+        """,
+        height=0,
+        key="system_card_click_listener"
+    )
+
+    # Check if the system card was clicked
+    if st.session_state.get("system_card_click_listener", False):
+        # Increment click counter
+        st.session_state.system_card_clicks += 1
+        # Log the click event
+        streamlit_analytics.log_event("system_card_clicked")
+        # Reset the listener
+        st.session_state["system_card_click_listener"] = False
+
+    # Add an admin section in the sidebar
     with st.sidebar:
         st.title("Admin Panel")
         password = st.text_input("Enter password to view analytics", type="password")
@@ -136,5 +166,8 @@ with streamlit_analytics.track(
             st.subheader("Analytics Dashboard")
             
             if st.button("View Analytics"):
-                streamlit_analytics.stop_tracking()
+                # Display the analytics
                 streamlit_analytics.analyze()
+                
+            # Display additional custom metrics
+            st.metric("System Card Clicks", st.session_state.system_card_clicks)
