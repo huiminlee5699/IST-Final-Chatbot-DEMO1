@@ -79,6 +79,18 @@ st.write(
     "Feel free to ask me anything!"
 )
 
+# Add a special system card link that will communicate with Qualtrics
+st.markdown("""
+<div style="margin: 20px 0; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; background-color: #f8f9fa;">
+    <p style="margin-bottom: 5px;">💡🧠🤓 <strong>Want to learn how I come up with responses?</strong></p>
+    <a href="javascript:void(0);" 
+       onclick="parent.postMessage({'type':'system_card_click','card':'1'}, '*')" 
+       style="color: #007BFF; text-decoration: none;">
+       Read more here →
+    </a>
+</div>
+""", unsafe_allow_html=True)
+
 # Use the API key from Streamlit secrets
 openai_api_key = st.secrets["openai_api_key"]
 
@@ -101,6 +113,16 @@ if prompt := st.chat_input("What would you like to know today?"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
+    
+    # Send a message to Qualtrics to track this interaction
+    st.markdown(
+        """
+        <script>
+        parent.postMessage({'type': 'interaction'}, '*');
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
         
     # Generate a response using the OpenAI API.
     stream = client.chat.completions.create(
@@ -119,24 +141,6 @@ if prompt := st.chat_input("What would you like to know today?"):
         response_container = st.empty()  # placeholder for streaming text
         full_response = ""
         
-        # Count previous assistant messages
-        assistant_messages = [
-            msg for msg in st.session_state.messages if msg["role"] == "assistant"
-        ]
-        
-        # If this is after the second assistant message (2nd, 4th, etc.), prepend the message
-        prepend_message = ""
-        if len(assistant_messages) == 1:  # Changed condition to display after 2nd response
-            prepend_message = (
-                "💡🧠🤓 <strong>Want to learn how I come up with responses?</strong>\n"
-                "<a href=\"https://www.figma.com/proto/haXTVr4wZaeSC344BqDBpR/Text-Transparency-Card?page-id=0%3A1&node-id=1-33&p=f&viewport=144%2C207%2C0.47&t=Hp8ZCw5Fg7ahsiq1-8&scaling=min-zoom&content-scaling=fixed&hide-ui=1\" target=\"_blank\" style=\"color: #007BFF; text-decoration: none;\">\n"
-                "Read more here →\n"
-                "</a>\n\n ---------------- \n"
-            )
-              
-            full_response += prepend_message
-            response_container.markdown(full_response, unsafe_allow_html=True)
-        
         # Continue streaming the assistant's response
         for chunk in stream:
             if chunk.choices[0].delta.content:
@@ -145,3 +149,13 @@ if prompt := st.chat_input("What would you like to know today?"):
     
         # Store the final response in session state
         st.session_state.messages.append({"role": "assistant", "content": full_response})
+        
+        # Send another interaction message to Qualtrics
+        st.markdown(
+            """
+            <script>
+            parent.postMessage({'type': 'interaction'}, '*');
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
