@@ -3,8 +3,6 @@ import streamlit.components.v1 as components
 from openai import OpenAI
 import time
 
-st.markdown('<a href="https://www.figma.com/proto/ZeWFZShKd7Pu8N3Wwj8wri/Transparency-card?page-id=0%3A1&node-id=1-2&p=f&viewport=54%2C476%2C0.2&t=z8tiRCZcXZC9N553-8&scaling=min-zoom&content-scaling=fixed&hide-ui=1" target="_self">View System Card</a>', unsafe_allow_html=True)
-
 # Show title and description.
 st.title("💬 Chatbot")
 st.write(
