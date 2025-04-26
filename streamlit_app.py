@@ -42,7 +42,7 @@ footer {
 
 <footer>
     💡🧠🤓 <strong>Want to learn how I come up with responses?</strong>
-    <a href="www.google.com" target="_self" style="color: #007BFF; text-decoration: none;">
+    <a href="https://www.google.com" target="_self" style="color: #007BFF; text-decoration: none;">
         Read more here →
     </a>
 </footer>
